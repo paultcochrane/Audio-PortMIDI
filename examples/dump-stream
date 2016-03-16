@@ -1,0 +1,29 @@
+#!perl6
+
+use Audio::PortMIDI;
+
+my $pm = Audio::PortMIDI.new;
+
+my $i = $pm.default-input-device;
+
+say $i.perl;
+
+
+my $stream = $pm.open-input($i.device-id, 32);
+
+use NativeCall;
+
+say $pm.default-input-device;
+
+loop {
+    if $stream.poll {
+        say "read";
+        my $a = $stream.read(2);
+        say $a[0];
+        last;
+    }
+
+}
+
+$stream.close;
+# vim: expandtab shiftwidth=4 ft=perl6

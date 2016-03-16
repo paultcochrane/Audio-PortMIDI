@@ -70,8 +70,8 @@ class Audio::PortMIDI {
     }
 
     class Event is repr('CStruct') {
-	    has int32                       $.message;
-	    has int32                       $.timestamp;
+	    has int32   $.message   = 0;
+	    has int32   $.timestamp = 0;
     }
 
     enum Filter (
@@ -168,12 +168,13 @@ class Audio::PortMIDI {
 
         sub Pm_Read(Stream $stream, CArray[Event] $buffer, int32 $length) is native(LIB) returns int32 { * }
 
+
         proto method read(|c) { * }
 
-        multi method read(Int $length) returns CArray {
-            my $a = CArray[Event].new;
-            $a[$length - 1] = Event;
+        multi method read(Int $length) returns CArray[Event] {
+            my $a = CArray[Event].new((Event.new) xx $length);
             my $rc = Pm_Read(self, $a, $length);
+            say $rc;
             if $rc < 0 {
                 X::PortMIDI.new(code => $rc, what => "reading stream").throw;
             }

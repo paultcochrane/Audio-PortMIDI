@@ -1,0 +1,13 @@
+#!perl6
+
+use Audio::PortMIDI;
+
+my $pm = Audio::PortMIDI.new;
+
+for $pm.devices -> $device {
+    say $device.perl;
+
+}
+
+
+# vim: expandtab shiftwidth=4 ft=perl6
