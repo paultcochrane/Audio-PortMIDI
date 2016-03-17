@@ -90,13 +90,15 @@ class Audio::PortMIDI {
             PitchBend           => 0b1110,
             System              => 0b1111,
         );
-        has Int $.message;
-        has Int $.timestamp;
-        has Int $.status;
-        has Int $.channel;
-        has Type $.event-type;
-        has Int $.data-one;
-        has Int $.data-two;
+
+        has Int     $.message;
+        has Int     $.timestamp;
+        has Int     $.status;
+        has Int     $.channel;
+        has Type    $.event-type;
+        has Int     $.data-one;
+        has Int     $.data-two;
+
         submethod BUILD(Int :$event) {
             if $event.defined {
                 $!timestamp = extract-bits($event,32,0,64);
@@ -104,26 +106,60 @@ class Audio::PortMIDI {
             }
         }
 
+        method message() returns Int {
+            if !$!message.defined {
+               my $mess = 0;
+               if self.status.defined {
+                   $mess = insert-bits(self.status, $mess, 8, 16, 24 );
+               }
+               if self.data-one.defined {
+                   $mess = insert-bits(self.data-one, $mess,8, 8, 24 );
+               }
+               if self.data-two.defined {
+                   $mess = insert-bits(self.data-two, $mess,8, 0, 24);
+               }
+               $!message = $mess;
+            }
+            $!message;
+        }
+
+        method status() returns Int {
+            if !$!status.defined {
+                if $!message.defined {
+                    $!status = extract-bits($!message,8,16,24);
+                }
+                elsif $!channel.defined && $!event-type.defined {
+                    my $status = insert-bits($!event-type,0,4,0,8);
+                    $!status = insert-bits($!channel, $status,4,4,8);
+                }
+            }
+            $!status;
+        }
+
         method channel() returns Int {
             if !$!channel.defined {
-                $!channel = extract-bits($!message,4,20,24);
+                if self.status.defined {
+                    $!channel = extract-bits(self.status,4,4,8);
+                }
             }
             $!channel;
         }
         method event-type() returns Int {
-            if !$!event-type.defined {
-                $!event-type = Type(extract-bits($!message,4,16,24));
+            if !$!event-type.defined  {
+                if self.status.defined {
+                    $!event-type = Type(extract-bits(self.status,4,0,8));
+                }
             }
         }
 
         method data-one() returns Int {
-            if !$!data-one.defined {
+            if !$!data-one.defined && $!message.defined {
                 $!data-one = extract-bits($!message,8,8,24);
             }
             $!data-one;
         }
         method data-two() returns Int {
-            if !$!data-two.defined {
+            if !$!data-two.defined  && $!message.defined {
                 $!data-two = extract-bits($!message,8,0,24);
             }
             $!data-two;
@@ -133,8 +169,10 @@ class Audio::PortMIDI {
             "Channel : { self.channel } Event: { self.event-type } D1 : { self.data-one } D2 : { self.data-two }";
         }
 
-
-
+        method Int() returns Int {
+            my $int = insert-bits(self.message // 0, 0, 32, 32, 64);
+            insert-bits(self.timestamp // 0, $int, 32, 0, 64);
+        }
     }
 
     enum Filter (
@@ -253,9 +291,14 @@ class Audio::PortMIDI {
 
         sub Pm_Write(Stream $stream, CArray[int64] $buffer, int32  $length ) is native(LIB) returns int32 { * }
 
-        method write(Event @events) {
+        proto method write(|c) { * }
+
+        multi method write(Event @events) {
             my $buffer = CArray[int64].new;
             my $length = @events.elems;
+            for @events -> $event {
+                $buffer[$++] = $event.Int;
+            }
             my $rc = Pm_Write(self, $buffer, $length);
             if $rc < 0 {
                 X::PortMIDI.new(code => $rc, what => "writing stream").throw;
@@ -263,6 +306,13 @@ class Audio::PortMIDI {
         }
 
         sub Pm_WriteShort(Stream $stream, int32 $when, int32 $msg) is native(LIB) returns int32 { * }
+
+        multi method write(Event $event) {
+            my $rc = Pm_WriteShort(self, $event.timestamp, $event.message);
+            if $rc < 0 {
+                X::PortMIDI.new(code => $rc, what => "writing stream").throw;
+            }
+        }
 
         sub Pm_WriteSysEx(Stream $stream, int32 $when, Pointer[uint8] $msg) is native(LIB) returns int32 { * }
     }
@@ -273,12 +323,18 @@ class Audio::PortMIDI {
         method start() {
             Pt_Start(1, Code, Pointer);
         }
+
+        sub Pt_Time() returns int32 is native(LIB) { * }
+
+        method time() returns Int {
+            Pt_Time();
+        }
     }
 
 
     multi submethod BUILD() {
         self.initialize();
-        #Time.start();
+        Time.start();
     }
 
     sub Pm_Initialize() is native(LIB) returns int32 { * }
