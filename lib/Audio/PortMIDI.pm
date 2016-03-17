@@ -5,7 +5,6 @@ use NativeCall;
 class Audio::PortMIDI {
 
     constant LIB = ('portmidi',v0);
-    subset DeviceID of int32;
 
     enum Error (
         NoError             => 0,
@@ -44,12 +43,12 @@ class Audio::PortMIDI {
     }
 
     my class DeviceInfoX is repr('CStruct') {
-	    has int32                          $.struct-version;
-	    has Str                            $.interface;
-	    has Str                            $.name;
-	    has uint32                         $.input;
-	    has uint32                         $.output;
-	    has uint32                         $.opened;
+	    has int32                         $.struct-version;
+	    has Str                           $.interface;
+	    has Str                           $.name;
+	    has int32                         $.input;
+	    has int32                         $.output;
+	    has int32                         $.opened;
     }
 
     class DeviceInfo {
@@ -69,9 +68,73 @@ class Audio::PortMIDI {
 
     }
 
-    class Event is repr('CStruct') {
-	    has int32   $.message   = 0;
-	    has int32   $.timestamp = 0;
+    # For some reason the nativecall can't deal with the pattern
+    # we have here so we will cheat and pretend we're dealing with
+    # a uint64 and unpack the parts ourself.
+
+    class EventX is repr('CStruct') {
+        has int32   $.message;
+	    has int32   $.timestamp;
+    }
+
+    use Util::Bitfield;
+
+    class Event {
+        enum Type (
+            NoteOff             => 0b1000,
+            NoteOn              => 0b1001,
+            PolyphonicPressure  => 0b1010,
+            ControlChange       => 0b1011,
+            ProgramChange       => 0b1100,
+            ChannelPressure     => 0b1101,
+            PitchBend           => 0b1110,
+            System              => 0b1111,
+        );
+        has Int $.message;
+        has Int $.timestamp;
+        has Int $.status;
+        has Int $.channel;
+        has Type $.event-type;
+        has Int $.data-one;
+        has Int $.data-two;
+        submethod BUILD(Int :$event) {
+            if $event.defined {
+                $!timestamp = extract-bits($event,32,0,64);
+                $!message   = extract-bits($event,32,32,64);
+            }
+        }
+
+        method channel() returns Int {
+            if !$!channel.defined {
+                $!channel = extract-bits($!message,4,20,24);
+            }
+            $!channel;
+        }
+        method event-type() returns Int {
+            if !$!event-type.defined {
+                $!event-type = Type(extract-bits($!message,4,16,24));
+            }
+        }
+
+        method data-one() returns Int {
+            if !$!data-one.defined {
+                $!data-one = extract-bits($!message,8,8,24);
+            }
+            $!data-one;
+        }
+        method data-two() returns Int {
+            if !$!data-two.defined {
+                $!data-two = extract-bits($!message,8,0,24);
+            }
+            $!data-two;
+        }
+
+        method gist() returns Str {
+            "Channel : { self.channel } Event: { self.event-type } D1 : { self.data-one } D2 : { self.data-two }";
+        }
+
+
+
     }
 
     enum Filter (
@@ -166,25 +229,33 @@ class Audio::PortMIDI {
             Bool($rc);
         }
 
-        sub Pm_Read(Stream $stream, CArray[Event] $buffer, int32 $length) is native(LIB) returns int32 { * }
+        sub Pm_Read(Stream $stream, CArray $buffer, int32 $length) is native(LIB) returns int32 { * }
 
 
         proto method read(|c) { * }
 
-        multi method read(Int $length) returns CArray[Event] {
-            my $a = CArray[Event].new((Event.new) xx $length);
-            my $rc = Pm_Read(self, $a, $length);
-            say $rc;
+        multi method read(Int $length) {
+            my CArray[int64] $buff = CArray[int64].new;
+            $buff[$length - 1] = 0;
+            my $rc = Pm_Read(self, $buff, $length);
             if $rc < 0 {
                 X::PortMIDI.new(code => $rc, what => "reading stream").throw;
             }
 
-            $a;
+            my @buff;
+
+            for ^$rc -> $i {
+                @buff.append: Event.new(event => $buff[$i]);
+            }
+
+            @buff;
         }
 
-        sub Pm_Write(Stream $stream, CArray[Event] $buffer, int32  $length ) is native(LIB) returns int32 { * }
+        sub Pm_Write(Stream $stream, CArray[int64] $buffer, int32  $length ) is native(LIB) returns int32 { * }
 
-        method write(CArray[Event] $buffer, Int $length) {
+        method write(Event @events) {
+            my $buffer = CArray[int64].new;
+            my $length = @events.elems;
             my $rc = Pm_Write(self, $buffer, $length);
             if $rc < 0 {
                 X::PortMIDI.new(code => $rc, what => "writing stream").throw;
@@ -196,9 +267,18 @@ class Audio::PortMIDI {
         sub Pm_WriteSysEx(Stream $stream, int32 $when, Pointer[uint8] $msg) is native(LIB) returns int32 { * }
     }
 
+    class Time {
+        sub Pt_Start(int32 $resolution, &ccb (int32 $timestamp, Pointer $userdata), Pointer $u) returns int32 is native(LIB) { * }
+
+        method start() {
+            Pt_Start(1, Code, Pointer);
+        }
+    }
+
 
     multi submethod BUILD() {
         self.initialize();
+        #Time.start();
     }
 
     sub Pm_Initialize() is native(LIB) returns int32 { * }

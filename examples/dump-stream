@@ -11,16 +11,12 @@ say $i.perl;
 
 my $stream = $pm.open-input($i.device-id, 32);
 
-use NativeCall;
-
 say $pm.default-input-device;
 
 loop {
     if $stream.poll {
-        say "read";
-        my $a = $stream.read(2);
-        say $a[0];
-        last;
+        my @a = $stream.read(1);
+        say @a[0];
     }
 
 }
