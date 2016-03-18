@@ -2,11 +2,15 @@
 
 use Audio::PortMIDI;
 
-my $pm = Audio::PortMIDI.new;
+sub MAIN(Bool :$input = False, Bool :$output = False) {
+    my $pm = Audio::PortMIDI.new;
 
-for $pm.devices -> $device {
-    say $device.perl;
-
+    my Bool $both = $input == $output;
+    for $pm.devices -> $device {
+        if $both || ( $input && $device.input ) || ( $output && $device.output ) {
+            say $device;
+        }
+    }
 }
 
 
