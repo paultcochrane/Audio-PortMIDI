@@ -80,7 +80,7 @@ class Audio::PortMIDI {
     use Util::Bitfield;
 
     class Event {
-        enum Type (
+        enum Type is export (
             NoteOff             => 0b1000,
             NoteOn              => 0b1001,
             PolyphonicPressure  => 0b1010,
@@ -88,7 +88,7 @@ class Audio::PortMIDI {
             ProgramChange       => 0b1100,
             ChannelPressure     => 0b1101,
             PitchBend           => 0b1110,
-            System              => 0b1111,
+            SystemMessage       => 0b1111,
         );
 
         has Int     $.message;
@@ -99,7 +99,7 @@ class Audio::PortMIDI {
         has Int     $.data-one;
         has Int     $.data-two;
 
-        submethod BUILD(Int :$event) {
+        submethod BUILD(Int :$event, Int :$!timestamp, Int :$!channel, Type :$!event-type, Int :$!data-one, Int :$!data-two) {
             if $event.defined {
                 $!timestamp = extract-bits($event,32,0,64);
                 $!message   = extract-bits($event,32,32,64);
@@ -150,6 +150,7 @@ class Audio::PortMIDI {
                     $!event-type = Type(extract-bits(self.status,4,0,8));
                 }
             }
+            $!event-type;
         }
 
         method data-one() returns Int {
@@ -318,6 +319,13 @@ class Audio::PortMIDI {
     }
 
     class Time {
+
+        sub Pt_Started() returns int32 is native(LIB) { * }
+
+        method started() returns Bool {
+            my $rc = Pt_Started();
+            Bool($rc);
+        }
         sub Pt_Start(int32 $resolution, &ccb (int32 $timestamp, Pointer $userdata), Pointer $u) returns int32 is native(LIB) { * }
 
         method start() {
