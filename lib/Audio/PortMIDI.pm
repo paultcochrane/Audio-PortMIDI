@@ -65,6 +65,15 @@ class Audio::PortMIDI {
             Bool($!device-info.opened);
         }
 
+        method gist() {
+            sprintf "%3i :  %-25s  %10s  %2s   %3s   %4s", self.device-id, 
+                                                        self.name, 
+                                                        self.interface,
+                                                        ( self.input ?? 'In' !! '--' ),
+                                                        ( self.output ?? 'Out' !! '---' ), 
+                                                        (self.opened ?? 'Open' !! '----');
+        }
+
 
     }
 
@@ -99,7 +108,7 @@ class Audio::PortMIDI {
         has Int     $.data-one;
         has Int     $.data-two;
 
-        submethod BUILD(Int :$event, Int :$!timestamp, Int :$!channel, Type :$!event-type, Int :$!data-one, Int :$!data-two) {
+        submethod BUILD(Int :$event, Int :$!timestamp, Int :$!channel, Type :$!event-type, Int :$!data-one, Int :$!data-two, Int :$!status) {
             if $event.defined {
                 $!timestamp = extract-bits($event,32,0,64);
                 $!message   = extract-bits($event,32,32,64);
