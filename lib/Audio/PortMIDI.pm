@@ -420,7 +420,18 @@ class Audio::PortMIDI {
 
     sub Pm_OpenInput(CArray[Stream] $stream, int32 $inputDevice, Pointer $inputDriverInfo, int32 $bufferSize ,&time_proc (Pointer --> int32), Pointer $time_info) is native(LIB) returns int32 { * }
 
-    method open-input(Int $device-id, Int $buffer-size) returns Stream {
+    proto method open-input(|c) { * }
+
+    multi method open-input(DeviceInfo:D $dev, Int $buffer-size) returns Stream {
+        if $dev.input {
+            samewith $dev.device-id, $buffer-size;
+        }
+        else {
+            X::PortMIDI.new(code => -9999, message => "not an input device", what => "opening input stream").throw;
+        }
+    }
+
+    multi method open-input(Int $device-id, Int $buffer-size) returns Stream {
         my $stream = CArray[Stream].new(Stream.new);
         my $rc = Pm_OpenInput($stream, $device-id, Pointer, $buffer-size, Code, Pointer);
         if $rc < 0 {
@@ -431,7 +442,20 @@ class Audio::PortMIDI {
 
     sub Pm_OpenOutput(CArray[Stream] $stream, int32 $outputDevice, Pointer $outputDriverInfo, int32 $bufferSize ,&time_proc (Pointer --> int32), Pointer $time_info, int32 $latency) is native(LIB) returns int32 { * }
 
-    method open-output(Int $device-id, Int $buffer-size, Int $latency = 0) returns Stream {
+    
+    proto method open-output(|c) { * }
+
+
+    multi method open-output(DeviceInfo:D $dev, Int $buffer-size, Int $latency = 0 ) returns Stream {
+        if $dev.output {
+            samewith $dev.device-id, $buffer-size, $latency;
+        }
+        else {
+            X::PortMIDI.new(code => -9999, message => "not an output device", what => "opening output stream").throw;
+        }
+    }
+
+    multi method open-output(Int $device-id, Int $buffer-size, Int $latency = 0) returns Stream {
         my $stream = CArray[Stream].new(Stream.new);
         my $rc = Pm_OpenOutput($stream, $device-id, Pointer, $buffer-size, Code, Pointer, $latency);
         if $rc < 0 {
