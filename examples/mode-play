@@ -23,24 +23,25 @@ class Mode {
     }
 }
 
-sub MAIN(Str :$mode = 'mixolydian', Int :$root = 25, Int :$output = 3) {
+sub MAIN(Str :$mode = 'mixolydian', Int :$root = 25, Int :$output = 3, Int :$bpm = 120, Int :$channel = 0) {
     my $pm = Audio::PortMIDI.new;
     my $s = $pm.open-output($output,32);
 
     my $my-mode = Mode.new(:$root, :$mode);
 
-    my @a = (.0625, .125,);
+    my $seconds-per-quarter = 1 / ( 120
+    my @a = ($seconds-per-quarter/8, $seconds-per-quarter/4,);
 
     loop {
         my $start = now;
         my $n = ($my-mode.notes.pick + (0,0,0,12,24,0).pick);
         my $v = (80 .. 127).pick;
-        my $on = Audio::PortMIDI::Event.new(channel => 0, event-type => NoteOn, data-one => $n, data-two => $v, timestamp => $++);
+        my $on = Audio::PortMIDI::Event.new(:$channel, event-type => NoteOn, data-one => $n, data-two => $v, timestamp => $++);
         $s.write($on);
         sleep @a.pick;
-        my $off = Audio::PortMIDI::Event.new(channel => 0, event-type => NoteOff, data-one => $n, data-two => $v, timestamp => $++);
+        my $off = Audio::PortMIDI::Event.new(:$channel, event-type => NoteOff, data-one => $n, data-two => $v, timestamp => $++);
         $s.write($off);
-        my $l = .125 - (now - $start);
+        my $l = ($seconds-per-quarter/4) - (now - $start);
         sleep $l if $l > 0;
     }
 }
