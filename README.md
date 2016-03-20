@@ -46,3 +46,7 @@ The MIDI specification itself doesn't particularly provide for the
 arrangement of the events themselves in time and this is assumed to
 be the responsibility of the calling application.  
 
+You almost certainly will want to familiarise yourself to some extent
+with the [MIDI protocol](http://www.midi.org) and especially the types
+of messages that are sent as the interface of PortMIDI and hence this
+module is fairly "close to the wire".
