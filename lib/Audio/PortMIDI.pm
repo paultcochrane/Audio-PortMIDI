@@ -465,17 +465,17 @@ provides values that can be used (possibly with an offset.)
 
 =head2 channel
 
-This is the Int channel number to be used for channel messages, it should
-be a value between 0 .. 15 (most documentation uses 1 .. 16 so you may
-need to subtract 1 from a value for the device if you have one.) It doesn't
-make sense as a channel number if it is a system message (it will 
-actually be part of the "command".) Setting this (along with C<event-type>,)
-does not make sense if C<status> is being set.
+This is the Int channel number to be used for channel messages, it
+should be a value between 0 .. 15 (most documentation uses 1 .. 16
+so you may need to subtract 1 from a value for the device if you have
+one.) It doesn't make sense as a channel number if it is a system message
+(it will actually be part of the "command".) Setting this (along with
+C<event-type>,) does not make sense if C<status> is being set.
 
 =head2 event-type
 
-This is a value of the enum C<Audio::PortMIDI::Event::Type> (which is exported
-so it does not need to be fully qualified,):
+This is a value of the enum C<Audio::PortMIDI::Event::Type> (which is
+exported so it does not need to be fully qualified,):
 
 =head3 NoteOff
 
@@ -553,6 +553,62 @@ command and channel, the whole status byte should be
 considered to be the "command".  For a message that is
 to be sent you probably wouldn't set this but supply
 the appropriate C<status>.
+
+=head2 status
+
+This is the entire status byte, if this has the highest
+four bits set (i.e. it has the value of 240 or greater) then
+the message is a "system message", and the C<event-type> and
+C<channel> are probably not meaningful themselves (the 
+C<event-type> is C<SystemMessage> and the lower four bits
+indicate the actual message type.)  If you set this then you
+do not need to set the C<event-type> and C<channel> and vice
+versa.
+
+The most common values used are those related to the MIDI
+realtime clock that may control the tempo and playback of
+the receiving device or may be received to control the
+tempo in your application:
+
+=head3 Clock
+
+If a clock is being provided to or from a device events of
+this type are sent 24 times per quarter note (or every
+0.020833 seconds at 120 beats per minute.) This sort of
+frequency should be doable in a Perl program though various
+scheduling delays may mean it will be difficult to maintain
+accuracy at higher tempos without using the C<portmidi> timer.
+
+The received clocks may be used for other than just setting
+the tempo on a receiving system, for instance synchronising the
+rate of an LFO or other modulation source.
+
+Some devices may commence playing on receipt of the first few
+clocks rather than needing a C<Start> message.
+
+Some devices that emit a clock may alter the frequency of the
+clocks temporarily to affect some time based decoration (such
+as a fill or roll from a drum machine.)
+
+=head3 Start
+
+If this is received the current sequence will start playing
+and it is assumed that will be followed by a series of C<Clock>
+messages indicating the tempo of playback. Playback is expected
+to start at the beginning.
+
+=head3 Continue
+
+If this is received and the sequence is stopped then playback
+will restart at the position where it was last stopped. Like
+Start it is assumed that this will be followed by a steady flow
+of C<Clock> messages.
+
+=head3 Stop
+
+This will stop any running sequence on any attached device,
+typically the stream of C<Clock> messages will stop as well.
+
 
 =end pod
 
@@ -655,6 +711,12 @@ class Audio::PortMIDI {
             ChannelPressure     => 0b1101,
             PitchBend           => 0b1110,
             SystemMessage       => 0b1111,
+        );
+        enum RealTime is export (
+            Clock       =>  0b11111000,
+            Start       =>  0b11111010,
+            Continue    =>  0b11111011,
+            Stop        =>  0b11111100
         );
 
         has Int     $.message;
