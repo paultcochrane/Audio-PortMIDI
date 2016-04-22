@@ -937,7 +937,7 @@ class Audio::PortMIDI {
         sub Pm_WriteShort(Stream $stream, int32 $when, int32 $msg) is native(LIB) returns int32 { * }
 
         multi method write(Event $event) {
-            my $rc = Pm_WriteShort(self, $event.timestamp, $event.message);
+            my $rc = Pm_WriteShort(self, $event.timestamp // 0, $event.message);
             if $rc < 0 {
                 X::PortMIDI.new(code => $rc, what => "writing stream").throw;
             }
