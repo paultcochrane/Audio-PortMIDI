@@ -26,7 +26,7 @@ BPM on the specified device, it's probably not very accurate
 at all due to the timer resolution but could probably be
 improved with a bit of care.
 
-## [mode-play](modal-play)
+## [mode-play](mode-play)
 
 This plays notes from the specificied mode starting at a given
 root to a supplied device. Depending on the instrument you
