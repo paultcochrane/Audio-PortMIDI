@@ -165,7 +165,7 @@ a higher value if you are expecting a high number of messages between
 each opportunity to read, this may of course slightly increase overall
 application latency.  If you have a large number of messages (clocks,
 control changes, and so forth) that you are not interested in then you
-may set a filter on the Stream to reduce the numbeer that are buffered
+may set a filter on the Stream to reduce the number that are buffered
 for your application.
 
 =head2 method open-output
