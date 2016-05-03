@@ -640,6 +640,14 @@ class Audio::PortMIDI {
         Pm_GetErrorText($code);
     }
 
+    sub Pm_GetHostErrorText(Buf $b, int32 $len) is native(LIB) { * }
+
+    method host-error-text() returns Str {
+        my Buf $buf = Buf.allocate(255);
+        Pm_GetHostErrorText($buf, 255);
+        $buf.decode;
+    }
+
     class X::PortMIDI is Exception {
         has Int $.code is required;
         has Str $.what is required;
@@ -648,6 +656,9 @@ class Audio::PortMIDI {
         method message() returns Str {
             if !$!message.defined {
                 my $text = Pm_GetErrorText($!code);
+                if $!code ~~ HostError {
+                    $text ~= ': ' ~ Audio::PortMIDI.host-error-text;
+                }
                 $!message = "{$!what} : $text";
             }
             $!message;
@@ -990,8 +1001,6 @@ class Audio::PortMIDI {
             X::PortMIDI.new(code => $rc, what => 'terminating portmidi').throw;
         }
     }
-
-    sub Pm_GetHostErrorText(Str $msg is rw, uint32 $len ) is native(LIB)  { * }
 
     sub Pm_CountDevices() is native(LIB) returns int32 { * }
 

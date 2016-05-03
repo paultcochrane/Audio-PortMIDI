@@ -13,6 +13,8 @@ if library-exists('portmidi', v0) {
     my $obj;
     lives-ok { $obj = Audio::PortMIDI.new }, "create new Audio::PortMIDI object";
     isa-ok $obj, Audio::PortMIDI, "and it actually is one";
+    my $host-error;
+    lives-ok { $host-error = $obj.host-error-text }, "host-error-text";
     my $count;
     lives-ok { $count = $obj.count-devices }, "get device count";
     if $count > 0 {
