@@ -872,7 +872,7 @@ class Audio::PortMIDI {
         sub Pm_SetFilter(StreamPointer $stream , int32 $filters) is native(LIB) returns int32 { * }
 
         method set-filter(Int $filter) {
-            $.ev-chan.send(%(call => &Pm_SetFilter, args => [$.ptr[0], $filter]);
+            $.ev-chan.send(%(call => &Pm_SetFilter, args => [$.ptr[0], $filter]));
             my $rc = await $.rc-chan; 
             if $rc < 0 {
                 X::PortMIDI.new(code => $rc, what => 'setting filter').throw;
@@ -884,7 +884,7 @@ class Audio::PortMIDI {
 
         method set-channel-mask(*@channels where { @channels.elems <= 16 && all(@channels) ~~ ( 0 ..15 ) }) {
             my int $mask = @channels.map(1 +< *).reduce(&[+|]);
-            $.ev-chan.send(%(call => &Pm_SetChannelMask, args => [$.ptr, $mask]);
+            $.ev-chan.send(%(call => &Pm_SetChannelMask, args => [$.ptr, $mask]));
             my $rc = await $.rc-chan;
             if $rc < 0 {
                 X::PortMIDI.new(code => $rc, what => 'setting channel mask').throw;
