@@ -95,7 +95,7 @@ may help rule out problems with this module.
 
 If you have a problem or a suggestion then please raise an issue at:
 
-     https://github.com/jonathanstowe/Audio-PortMIDI/issues
+     https://github.com/Perl6-Noise-Gang/Audio-PortMIDI/issues
 
 Obviously if you have some query regarding interoperability with some
 particular device or software I am unlikely to be able to help much
@@ -108,5 +108,6 @@ This is free software. Please see the LICENSE file in the distribution
 for the terms of the license.
 
 	© Jonathan Stowe, 2016
+	© Perl 6 Noise Gang
 	
 
